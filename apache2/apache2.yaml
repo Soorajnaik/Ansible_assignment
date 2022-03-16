@@ -1,0 +1,27 @@
+---
+- name: apache
+  hosts: client
+  become: yes
+  become_user: root
+  tasks:
+    - name: apache2 installation
+      apt:
+        name: apache2
+        state: latest
+    - name: apache configuration
+      git:
+        repo: https://github.com/Soorajnaik/terraform_code.git
+        dest: /home/ubuntu/apache2
+        clone: yes
+        update: yes
+    - name: Configuring apache
+      command: cp '/home/ubuntu/apache2/Task 1/index.html' '/var/www/html'
+    - name: Edit index.html
+      replace:
+        path: /var/www/html/index.html
+        regexp: '(^<img  src ="C:\Users\KIIT\Desktop\Cloud computing\Task 1\pic1.png" width="800" height="500" align = "center">)$'
+        replace: '\<img  src ="/home/ubuntu/apache2/pic1.png" width="800" height="500" align = "center">'
+    - name: stop apache2
+      command: service apache2 stop
+    - name: start apache2
+      command: service apache2 start

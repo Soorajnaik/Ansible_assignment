@@ -1,0 +1,86 @@
+---
+- name: Installations
+  hosts: client
+  become: yes
+  become_user: root
+  tasks:
+  - name: Install Curl
+    apt:
+      name: curl
+      state: latest
+  - name: Install Unzip
+    apt:
+      name: unzip
+      state: latest
+  - name: Install Wget
+    apt:
+      name: wget
+      state: latest
+  - name: Update APT package manager repositories cache
+    apt:
+      update_cache: yes
+  - name: Install Java 
+    apt:
+      name: openjdk-11-jdk
+      state: latest
+  - name: Install Maven
+    apt:
+      name: maven
+      state: latest
+
+- name: Tomcat installation and configuration
+  hosts: client
+  become: yes
+  become_user: root
+  tasks:
+  - name: Download Tomcat Binaries
+    get_url:
+      url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.59/bin/apache-tomcat-9.0.59.zip 
+      dest: /home/ubuntu/
+  - name: Unzip Tomcat
+    unarchive:
+      src: /home/ubuntu/apache-tomcat-9.0.59.zip
+      dest: /home/ubuntu
+      remote_src: True
+  - name: Copy Maven code from github
+    git:
+       repo: https://github.com/Soorajnaik/Maven.git
+       dest: /home/ubuntu/Maven
+       clone: yes
+       update: yes
+  - name: Maven clean install
+    command: mvn -f /home/ubuntu/Maven clean install
+  - name: Copy target folder
+    copy:
+      src: /home/ubuntu/Maven/target/webapp.war
+      dest: /home/ubuntu/apache-tomcat-9.0.59/webapps
+  - name: Uncomment configuration
+    replace:
+      path: /home/ubuntu/apache-tomcat-9.0.59/conf/tomcat-users.xml
+      regexp: '<!--(\s+)<user username="admin" password="<must-be-changed>" roles="manager-gui"/>'
+      replace: '<user username="admin" password="admin" roles="manager-gui,admin-gui,manager-script"/>'
+  - name: Comment Line configuration
+    replace:
+      path: /home/ubuntu/apache-tomcat-9.0.59/conf/tomcat-users.xml
+      regexp: '(\s+)<user username="robot" password="<must-be-changed>" roles="manager-script"/>'
+      replace: '\n\t<!--<user username="robot" password="<must-be-changed>" roles="manager-script"/>-->'
+  - name: Comment manager configuration1
+    replace:
+      path: /home/ubuntu/apache-tomcat-9.0.59/webapps/manager/META-INF/context.xml
+      regexp: '(\s+)<Valve className="org.apache.catalina.valves.RemoteAddrValve"'
+      replace: '\n\t<!--<Valve className="org.apache.catalina.valves.RemoteAddrValve"-->'
+  - name: Comment manager configuration1
+    replace:
+      path: /home/ubuntu/apache-tomcat-9.0.59/webapps/host-manager/META-INF/context.xml
+      regexp: '(\s+)<Valve className="org.apache.catalina.valves.RemoteAddrValve"'
+      replace: '\n\t<!--<Valve className="org.apache.catalina.valves.RemoteAddrValve"-->'
+  - name: permission to catalina
+    command: chmod 777 /home/ubuntu/apache-tomcat-9.0.59/bin/catalina.sh 
+  - name: permission to shutdown
+    command: chmod 777 /home/ubuntu/apache-tomcat-9.0.59/bin/shutdown.sh
+  - name: permission to startup
+    command: chmod 777 /home/ubuntu/apache-tomcat-9.0.59/bin/startup.sh
+  - name: Stop catalina
+    command: nohup /home/ubuntu/apache-tomcat-9.0.59/bin/shutdown.sh
+  - name: Start catalina
+    command: nohup /home/ubuntu/apache-tomcat-9.0.59/bin/startup.sh
